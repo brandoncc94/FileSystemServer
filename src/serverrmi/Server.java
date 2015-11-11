@@ -2,6 +2,8 @@
 package serverrmi;
 
 import maininterface.IFunctions;
+import RMI.Tree;
+import RMI.Node;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
  
@@ -18,5 +20,4 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     public void MKDIR(String pName) throws RemoteException {
         System.out.println("Creando el directorio " + pName);
     }
-     
 }
