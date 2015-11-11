@@ -1,7 +1,7 @@
 
 package serverrmi;
 
-import RMI.IFunctions;
+import maininterface.IFunctions;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
  
