@@ -9,6 +9,7 @@ public class Tree<T> {
     public Tree(T pRootData) {
         root = new Node<>();
         root.setData(pRootData);
+        root.setParent(root); // Ver debido a que se puede en cmd
         root.setChildren(new ArrayList<>());
     }
 
