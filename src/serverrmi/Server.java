@@ -3,12 +3,14 @@ package serverrmi;
 
 import RMI.FileSystem;
 import RMI.InfoNode;
+import RMI.InfoNodeFile;
 import maininterface.IFunctions;
 import RMI.Tree;
 import RMI.Node;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
  
 public class Server extends UnicastRemoteObject implements IFunctions {
  
@@ -79,7 +81,7 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     
     private Node findPath(String pPath,String pRoot){
         FileSystem fs = getFileSystem(pRoot);
-        String[] path = pPath.split("\\\\");
+        String[] path = pPath.split("\\\\"); 
         Node<InfoNode> node = null;
         boolean withRoot = false;
         if(path[0].equals(pRoot+":\\")){
@@ -125,14 +127,26 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     }
 
     @Override
-    public String file(String pFileName,String pContent, String pPath, String pRoot) throws RemoteException {
-        String[] path = pPath.split("\\\\");
-        if(path.length==1){
-            
+    public boolean createFile(String pFileNamePath, String pContent, String pPath, String pRoot) throws RemoteException {
+        FileSystem fs = getFileSystem(pRoot);
+        int endIndex = pFileNamePath.lastIndexOf("\\");
+        String path = pPath; 
+        String filename = pFileNamePath;
+        Node<InfoNode> node = fs.getCurrent_Directory();
+        if (endIndex != -1){ 
+            path = pFileNamePath.substring(0, endIndex + 1);
+            filename = pFileNamePath.substring(endIndex + 1, pFileNamePath.length());
+            node = findPath(path,pRoot);
         }
-        Node<InfoNode> node = findPath(pPath,pRoot);
-        return "";
+     
+        if(node != null){
+            boolean created = node.addChild(new Node(new InfoNodeFile(filename, 
+                                            true, pContent, pContent.length()), node));
+            return created;
+        }
+        return false;
     }
+    
 
     @Override
     public String ls(String pRoot) throws RemoteException {
@@ -150,5 +164,41 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     @Override
     public boolean mv(String[] params, String pRoot) throws RemoteException {
         return false;
+    }
+    
+    @Override
+    public String cat(String[] pFilenames, String pRoot) throws RemoteException {
+        FileSystem fs = getFileSystem(pRoot);
+        
+        String filesContent = "";
+        for (String pFilename : pFilenames) {
+            String path = ""; 
+            String filename = pFilename;
+            Node<InfoNode> node = fs.getCurrent_Directory();
+            int endIndex = pFilename.lastIndexOf("\\");
+            if (endIndex != -1){ 
+                path = pFilename.substring(0, endIndex + 1);
+                filename = pFilename.substring(endIndex + 1, pFilename.length());
+                node = findPath(path,pRoot);
+            }
+            
+            ArrayList children =  node.getChildren();
+        
+            for (Object object : children) {
+                Node<InfoNodeFile> child;
+                try{
+                    child = (Node<InfoNodeFile>) object;
+                    if(child.getData().isIsFile()){
+                        if(child.getData().getName().equals(filename)){
+                            filesContent += child.getData().getName() + "\n";
+                            filesContent += child.getData().getContent() + "\n";
+                        }
+                    }
+                }catch(Exception e){
+                    continue;
+                }
+            }
+        }
+        return filesContent;
     }
 }
