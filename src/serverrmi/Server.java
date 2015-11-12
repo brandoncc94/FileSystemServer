@@ -31,11 +31,12 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     }
     
     @Override
-    public void mkdir(String pName,String pRoot) throws RemoteException {
+    public boolean mkdir(String pName,String pRoot) throws RemoteException {
         System.out.println("Creando el directorio " + pName);
         FileSystem fileSystem = getFileSystem(pRoot);
         Node currentNode = fileSystem.getCurrent_Directory();
-        currentNode.addChild(new Node(new InfoNode(pName,false),currentNode));
+        boolean created = currentNode.addChild(new Node(new InfoNode(pName,false),currentNode));
+        return created;
     }
 
     @Override
@@ -75,12 +76,10 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         }
         return null;
     }
-
-    @Override
-    public boolean cd(String pNewPath, String pRoot) throws RemoteException {
-        System.out.println("Buscando cd");
+    
+    private Node findPath(String pPath,String pRoot){
         FileSystem fs = getFileSystem(pRoot);
-        String[] path = pNewPath.split("\\\\");
+        String[] path = pPath.split("\\\\");
         Node<InfoNode> node = null;
         boolean withRoot = false;
         if(path[0].equals(pRoot+":\\")){
@@ -106,13 +105,50 @@ public class Server extends UnicastRemoteObject implements IFunctions {
                 node = findDirectory(node, path[i]);
                 if(node==null){
                     System.out.println("No encontrado");
-                    return false;
+                    return node;
                 }
                 i++;
             }
         }
-        fs.setCurrent_Directory(node);
-        return true;
-        
+        return node;
+    }
+
+    @Override
+    public boolean cd(String pNewPath, String pRoot) throws RemoteException {
+        FileSystem fs = getFileSystem(pRoot);
+        Node<InfoNode> node = findPath(pNewPath,pRoot);
+        if(node == null)return false;
+        else{
+            fs.setCurrent_Directory(node);
+            return true;
+        }
+    }
+
+    @Override
+    public String file(String pFileName,String pContent, String pPath, String pRoot) throws RemoteException {
+        String[] path = pPath.split("\\\\");
+        if(path.length==1){
+            
+        }
+        Node<InfoNode> node = findPath(pPath,pRoot);
+        return "";
+    }
+
+    @Override
+    public String ls(String pRoot) throws RemoteException {
+        FileSystem fs = getFileSystem(pRoot);
+        String listChildren="";
+        ArrayList children = fs.getCurrent_Directory().getChildren();
+        System.out.println("La cantidad de archivos es :"+children.size());
+        for (Object object : children) {
+            Node<InfoNode> child = (Node<InfoNode>) object;
+            listChildren = listChildren + child.getData().getName() +"\n";
+        }
+        return listChildren;
+    }
+
+    @Override
+    public boolean mv(String[] params, String pRoot) throws RemoteException {
+        return false;
     }
 }

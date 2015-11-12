@@ -16,8 +16,16 @@ public class Node<T> {
         this.children = new ArrayList<>();
     }
     
-    public void addChild(Node pNode) {
-        this.getChildren().add(pNode);
+    public boolean addChild(Node<InfoNode> pNode) {
+        String nodeName = pNode.getData().getName();
+        for (Node<T> node : children) {
+            Node<InfoNode> child = (Node<InfoNode>) node;
+            if(child.getData().getName().equals(nodeName)){
+                return false;
+            }
+        }
+        this.getChildren().add((Node<T>)pNode);
+        return true;
     }
 
     public T getData() {
