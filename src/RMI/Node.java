@@ -27,6 +27,10 @@ public class Node<T> {
         this.getChildren().add((Node<T>)pNode);
         return true;
     }
+    
+    public boolean removeChild(Node<InfoNode> pNode){
+        return children.remove(pNode);
+    }
 
     public T getData() {
         return data;
