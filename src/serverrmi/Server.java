@@ -209,10 +209,7 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             return true;
         }
     }
-    
-    
-    
-    
+       
     @Override
     public String cat(String[] pFilenames, String pRoot) throws RemoteException {
         FileSystem fs = getFileSystem(pRoot);
@@ -287,8 +284,10 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         
         if(isDir){
             try{
-                node = findDirectory(node, filenames[1]);
-                children =  node.getChildren();
+                if(filenames.length > 1){
+                    node = findDirectory(node, filenames[1]);
+                    children =  node.getChildren();
+                }                
                 if(node != null){
                     System.out.println("Nodo encontrado: " + node.getData().getName());
                 }else{
@@ -301,26 +300,22 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             try{
                 Node<InfoNodeFile> child = (Node<InfoNodeFile>) object;;
                 if(child.getData().isIsFile()){
-                    if(isDir){
+                    if(isDir)
                         removedChildren.add(child);
-                        break;
-                    }
                     else{
                         for(int i = 0; i < filenames.length; i++){
                             if(child.getData().getName().equals(filenames[i])){
                                 removedChildren.add(child);
-                                break;
                             }   
                         }   
                     }
-                    
                 }
-              
-                for(int i = 0; i < removedChildren.size(); i++)
-                    children.remove(removedChildren.get(i));
             }
             catch(Exception e){ }
         }
+        
+        for(int i = 0; i < removedChildren.size(); i++)
+                    children.remove(removedChildren.get(i));
         
         return true;
     }
