@@ -5,12 +5,10 @@ import RMI.FileSystem;
 import RMI.InfoNode;
 import RMI.InfoNodeFile;
 import maininterface.IFunctions;
-import RMI.Tree;
 import RMI.Node;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.Arrays;
  
 public class Server extends UnicastRemoteObject implements IFunctions {
  
@@ -22,13 +20,13 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     
     @Override
     public String create(int pSize) throws RemoteException {
-        System.out.println("Creando disco virtual de tamaño  " + pSize);
+        System.out.println("Creando disco virtual de tamaño  " + pSize + "Kb");
         int ascii = 65;
         String root = Character.toString((char)(ascii + directory));
         directory++;
         FileSystem new_FileSystem = new FileSystem(root, pSize);
         fileSystems.add(new_FileSystem);
-        System.out.println("Disco virtual "+root+" creado exitosamente. Tamaño de disco "+ new_FileSystem.getSize()+".");
+        System.out.println("Disco virtual "+root+" creado exitosamente. Tamaño de disco "+ new_FileSystem.getSize()+"Kb.");
         return root;
     }
     
@@ -140,8 +138,9 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         }
      
         if(node != null){
+            int tam = pContent.length()/1024 + 1;
             boolean created = node.addChild(new Node(new InfoNodeFile(filename, 
-                                            true, pContent, pContent.length()), node));
+                                            true, pContent, tam), node));
             return created;
         }
         return false;
@@ -194,11 +193,56 @@ public class Server extends UnicastRemoteObject implements IFunctions {
                             filesContent += child.getData().getContent() + "\n";
                         }
                     }
-                }catch(Exception e){
-                    continue;
-                }
+                }catch(Exception e){ }
             }
         }
         return filesContent;
+    }
+    
+    @Override
+    public boolean rm(String[] filenames, boolean isDir, String pRoot) throws RemoteException{
+        FileSystem fs = getFileSystem(pRoot);
+        Node<InfoNode> node = fs.getCurrent_Directory();
+        ArrayList children =  node.getChildren();
+        ArrayList<Object> removedChildren = new ArrayList<>();
+        
+        if(isDir){
+            try{
+                node = findDirectory(node, filenames[1]);
+                children =  node.getChildren();
+                if(node != null){
+                    System.out.println("Nodo encontrado: " + node.getData().getName());
+                }else{
+                    System.out.println("ERROR! Directorio " + filenames[1] + " no encontrado.");
+                }            
+            }catch(Exception e) { return false; }
+        }
+        
+        for (Object object : children) {
+            try{
+                Node<InfoNodeFile> child = (Node<InfoNodeFile>) object;;
+                if(child.getData().isIsFile()){
+                    if(isDir){
+                        removedChildren.add(child);
+                        break;
+                    }
+                    else{
+                        for(int i = 0; i < filenames.length; i++){
+                            if(child.getData().getName().equals(filenames[i])){
+                                removedChildren.add(child);
+                                break;
+                            }   
+                        }   
+                    }
+                    
+                }
+              
+                for(int i = 0; i < removedChildren.size(); i++)
+                    children.remove(removedChildren.get(i));
+            }
+            catch(Exception e){ }
+        }
+        
+        return true;
     }
 }
