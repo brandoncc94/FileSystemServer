@@ -28,11 +28,6 @@ public class ServerRMI {
     }
      
     public static void main(String[] args) {
-//        Tree tree = new Tree("Raíz");
-//        tree.getRoot().addChild(new Node("Hijo 1", tree.getRoot()));
-//        System.out.println(tree.getRoot().getData());
-//        System.out.println(((Node)tree.getRoot().getChildren().get(0)).getData());
-//        System.out.println(((Node)tree.getRoot().getChildren().get(0)).getParent().getData());
         ServerRMI server = new ServerRMI();
         server.startServer();
     }

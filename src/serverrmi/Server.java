@@ -79,6 +79,16 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         return null;
     }
     
+    private Node findNode(Node pCurrentNode,String pName){
+        for (Node<InfoNode> node : (ArrayList<Node>)pCurrentNode.getChildren() ) {
+            if(node.getData().getName().equals(pName)){
+                return node;
+            }
+        }
+        return null;
+    }
+    
+    
     private Node findPath(String pPath,String pRoot){
         FileSystem fs = getFileSystem(pRoot);
         String[] path = pPath.split("\\\\"); 
@@ -163,8 +173,46 @@ public class Server extends UnicastRemoteObject implements IFunctions {
 
     @Override
     public boolean mv(String[] params, String pRoot) throws RemoteException {
-        return false;
+        FileSystem fs = getFileSystem(pRoot);
+        String fileNamePath = params[1];
+        int endIndex = fileNamePath.lastIndexOf("\\");
+        String path = "";
+        String newPath = params[2];
+        String filename = fileNamePath;
+        Node<InfoNode> oldDirectory = fs.getCurrent_Directory();
+        if (endIndex != -1){ 
+            path = fileNamePath.substring(0, endIndex + 1);
+            filename = fileNamePath.substring(endIndex + 1, fileNamePath.length());
+            oldDirectory = findPath(path,pRoot);
+            if(oldDirectory == null)return false;
+        }
+        Node<InfoNode> node = findNode(oldDirectory, filename);
+        if(node == null) return false;
+        Node<InfoNode> newDirectory = findPath(newPath,pRoot);
+        if(newDirectory == null)return false;
+        boolean moved;
+        Node<InfoNode> nodeExist;
+        if(oldDirectory.equals(newDirectory)){
+            if(params.length > 3){
+                String newName = params[3];
+                nodeExist = findNode(newDirectory,newName);
+                if(nodeExist != null)return false;
+                node.getData().setName(newName);
+                return true;
+            }
+            return false;
+        }else{
+            nodeExist = findNode(newDirectory,node.getData().getName());
+            if(nodeExist != null)return false;
+            oldDirectory.removeChild(node);
+            newDirectory.addChild(node);
+            node.setParent(newDirectory);
+            return true;
+        }
     }
+    
+    
+    
     
     @Override
     public String cat(String[] pFilenames, String pRoot) throws RemoteException {
@@ -183,7 +231,7 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             }
             
             ArrayList children =  node.getChildren();
-        
+
             for (Object object : children) {
                 Node<InfoNodeFile> child;
                 try{
@@ -201,4 +249,35 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         }
         return filesContent;
     }
+
+    @Override
+    public int du(String pName, String pRoot) throws RemoteException {
+        //REVISAR CUANDO SOLO ESTA el nombre !!!!!!!!!!!!!!!!!
+        FileSystem fs = getFileSystem(pRoot);
+        String fileNamePath = pName;
+        int endIndex = fileNamePath.lastIndexOf("\\");
+        String path = "";
+        String name = fileNamePath;
+        Node<InfoNode> directory = fs.getCurrent_Directory();
+        if (endIndex != -1){ 
+            path = fileNamePath.substring(0, endIndex + 1);
+            name = fileNamePath.substring(endIndex + 1, fileNamePath.length());
+            directory = findPath(path,pRoot);
+            if(directory == null)return -1;
+        }
+        return getElementSize(findNode(directory, name));
+    }
+    
+    private int getElementSize(Node<InfoNode> pNode){
+        if(pNode.getData().isIsFile()){
+            return pNode.getData().getSize();
+        }else{
+            int size = 0;
+            for(Node<InfoNode> child : pNode.getChildren()){
+                size += getElementSize(child);
+            }
+            return size;
+        }
+    }
+    
 }
