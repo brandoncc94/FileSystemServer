@@ -298,7 +298,7 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         
         for (Object object : children) {
             try{
-                Node<InfoNodeFile> child = (Node<InfoNodeFile>) object;;
+                Node<InfoNodeFile> child = (Node<InfoNodeFile>) object;
                 if(child.getData().isIsFile()){
                     if(isDir)
                         removedChildren.add(child);
@@ -318,5 +318,21 @@ public class Server extends UnicastRemoteObject implements IFunctions {
                     children.remove(removedChildren.get(i));
         
         return true;
+    }
+    
+    @Override
+    public String find(String pName, String pRoot) throws RemoteException{
+        FileSystem fs = getFileSystem(pRoot);
+        Node<InfoNode> node = fs.getFileSystem().getRoot();
+        ArrayList children =  node.getChildren();
+        String rutas = "";
+        
+        for (Object object : children) {
+            Node<InfoNode> child = (Node<InfoNode>) object;
+            if(child.getData().getName().equals(pName)){
+                rutas += "1";
+            }
+        }
+        return rutas;
     }
 }
