@@ -9,6 +9,7 @@ import RMI.Node;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
  
 public class Server extends UnicastRemoteObject implements IFunctions {
  
@@ -38,8 +39,65 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         boolean created = currentNode.addChild(new Node(new InfoNode(pName,false),currentNode));
         return created;
     }
-
     
+    @Override
+    public String tree(String pRoot) throws RemoteException {
+        FileSystem fileSystem = getFileSystem(pRoot);
+        Node<InfoNode> currentNode = fileSystem.getCurrent_Directory();
+        String tree = "";
+        String preString = fillString("",currentNode.getData().getName().length()+2)+"|";
+        tree += "["+currentNode.getData().getName()+"]";
+        if(currentNode.getChildren().size() > 0){
+            //int sizeStr = sizeName(currentNode);
+            tree += "- " + treeAux(currentNode.getChildren(),preString,0);
+        }
+        return tree;
+    }
+    
+    private int sizeName(Node<InfoNode> pNode){
+        int size = 0;
+        for(Node<InfoNode> child : pNode.getChildren()){
+            size = Integer.max(size,child.getData().getName().length());
+        }
+        return size;
+    }
+    
+    private String fillString(String pString,int pSize){
+        char[] charArray = new char[pSize];
+        Arrays.fill(charArray, ' ');
+        String str = new String(charArray);
+        str = pString + str.substring(pString.length());
+        return str;
+    }
+    
+    private String treeAux(ArrayList<Node<InfoNode>> pChildren,String preString,int pSizeStr){
+        String tree = "";
+        int cont = 1;
+        System.out.println(pChildren.size());
+        int sizeChildren = pChildren.size();
+        for (Node<InfoNode> child: pChildren) {
+            boolean isFile = child.getData().isIsFile();
+            if(cont != 1){
+                tree += preString.substring(0, preString.length()-1) + "- ";
+            }
+            if(!isFile){
+                tree += "["+child.getData().getName()+"]";
+                if(child.getChildren().size() > 0){
+                    //int sizeStr = sizeName(child);
+                    int sizeStr = child.getData().getName().length()+2;
+                    String str = fillString("",sizeStr+1)+"|";
+                    tree += "- " + treeAux(child.getChildren(),preString + str,sizeStr);
+                }
+            }else{
+                tree += "("+child.getData().getName()+")"; 
+            }
+            if(cont != sizeChildren ){
+                tree += "\n" + preString +"\n";
+            }
+            cont++;
+        }
+        return tree;
+    }
     
     @Override
     public String getActualPath(String pRoot) throws RemoteException {
@@ -98,9 +156,10 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     private Node findPath(String pPath,String pRoot){
         FileSystem fs = getFileSystem(pRoot);
         String[] path = pPath.split("\\\\"); 
+        System.out.println(path[0]);
         Node<InfoNode> node = null;
         boolean withRoot = false;
-        if(path[0].equals(pRoot+":\\")){
+        if(path[0].equals(pRoot+":")){
             node = fs.getFileSystem().getRoot();
             withRoot = true;
         }
@@ -257,17 +316,23 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         //REVISAR CUANDO SOLO ESTA el nombre !!!!!!!!!!!!!!!!!
         FileSystem fs = getFileSystem(pRoot);
         String fileNamePath = pName;
-        int endIndex = fileNamePath.lastIndexOf("\\");
-        String path = "";
-        String name = fileNamePath;
-        Node<InfoNode> directory = fs.getCurrent_Directory();
-        if (endIndex != -1){ 
-            path = fileNamePath.substring(0, endIndex + 1);
-            name = fileNamePath.substring(endIndex + 1, fileNamePath.length());
-            directory = findPath(path,pRoot);
-            if(directory == null)return -1;
+        Node<InfoNode> currentNode = fs.getCurrent_Directory();
+        int endIndex = pName.lastIndexOf("\\");
+        if(endIndex != -1){
+            String path = pName.substring(0, endIndex + 1);
+            String name = pName.substring(endIndex + 1, pName.length());
+            System.out.println("Ruta: " +  path + ", nodo: "+ name);
+            currentNode = findPath(path,pRoot);
+            pName = name;
+            if(currentNode == null)return -1;
+            if(path.equals(pRoot+":\\") && name.equals(""))
+                return getElementSize(currentNode);
         }
-        return getElementSize(findNode(directory, name));
+        currentNode = findNode(currentNode,pName);
+        if(currentNode == null){
+            return -1;
+        }
+        return getElementSize(currentNode);
     }
     
     private int getElementSize(Node<InfoNode> pNode){
