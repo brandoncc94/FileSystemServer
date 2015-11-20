@@ -398,14 +398,21 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         FileSystem fs = getFileSystem(pRoot);
         Node<InfoNode> node = fs.getFileSystem().getRoot();
         ArrayList children =  node.getChildren();
-        String rutas = "";
-        
-        for (Object object : children) {
+        pName = pName.replaceAll("\\*", ".*");
+        pName = pName.replaceAll("\\+", ".+");
+        return find_aux(children, pName, pRoot, "");
+    }
+    
+    public String find_aux(ArrayList pChildren, String pName, String pRoot, String pRutas){
+        if(pChildren.size() <= 0)
+            return pRutas;
+        for (Object object : pChildren) {
             Node<InfoNode> child = (Node<InfoNode>) object;
-            if(child.getData().getName().equals(pName)){
-                rutas += "1";
-            }
+            if(child.getData().getName().matches(pName))
+                pRutas += getPath(child, pRoot) + "\n";
+            if(!child.getData().isIsFile())
+                pRutas = find_aux(child.getChildren(), pName, pRoot, pRutas);
         }
-        return rutas;
+        return pRutas;
     }
 }
