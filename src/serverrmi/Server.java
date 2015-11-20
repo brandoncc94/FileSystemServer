@@ -39,11 +39,19 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         return created;
     }
 
+    
+    
     @Override
-    public String getPath(String pRoot) throws RemoteException {
+    public String getActualPath(String pRoot) throws RemoteException {
         String path = "";
         FileSystem fs = getFileSystem(pRoot);
         Node<InfoNode> actual = fs.getCurrent_Directory();
+        return getPath(actual,pRoot);
+    }
+    
+    private String getPath(Node<InfoNode> pNode,String pRoot){
+        String path = "";
+        Node<InfoNode> actual = pNode;
         if(actual.equals(actual.getParent())){
             return pRoot+":\\";
         }
