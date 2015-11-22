@@ -28,6 +28,16 @@ public class Node<T> {
         return true;
     }
     
+    public Node getChild(String pNodeName){
+        for (Node<T> node : children) {
+            Node<InfoNode> child = (Node<InfoNode>) node;
+            if(child.getData().getName().equals(pNodeName)){
+                return child;
+            }
+        }
+        return null;
+    }
+    
     public boolean removeChild(Node<InfoNode> pNode){
         return children.remove(pNode);
     }

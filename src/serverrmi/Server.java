@@ -32,12 +32,21 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     }
     
     @Override
-    public boolean mkdir(String pName,String pRoot) throws RemoteException {
-        System.out.println("Creando el directorio " + pName);
+    public int mkdir(String pName,String pRoot, boolean pOverride) throws RemoteException {
         FileSystem fileSystem = getFileSystem(pRoot);
         Node currentNode = fileSystem.getCurrent_Directory();
+        Node existNode = currentNode.getChild(pName);
+        if(existNode !=null){
+            if(pOverride){
+                currentNode.removeChild(existNode);
+                currentNode.addChild(new Node(new InfoNode(pName,false),currentNode));
+                return 1;
+            }else{
+                return -1;
+            }
+        }
         boolean created = currentNode.addChild(new Node(new InfoNode(pName,false),currentNode));
-        return created;
+        return 1;
     }
     
     @Override
@@ -202,7 +211,7 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     }
 
     @Override
-    public boolean createFile(String pFileNamePath, String pContent, String pPath, String pRoot) throws RemoteException {
+    public int createFile(String pFileNamePath, String pContent, String pPath, String pRoot, boolean pOverride) throws RemoteException {
         FileSystem fs = getFileSystem(pRoot);
         int endIndex = pFileNamePath.lastIndexOf("\\");
         String path = pPath; 
@@ -213,14 +222,35 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             filename = pFileNamePath.substring(endIndex + 1, pFileNamePath.length());
             node = findPath(path,pRoot);
         }
-     
+        int freeSpace = fs.getSize() - getElementSize(fs.getFileSystem().getRoot());
+        System.out.println("Espacio disponible : "+freeSpace);
+        int tam = pContent.length()/1024 + 1;
+        Node<InfoNode> newNode = new Node(new InfoNodeFile(filename,true, pContent, tam), node);
         if(node != null){
-            int tam = pContent.length()/1024 + 1;
-            boolean created = node.addChild(new Node(new InfoNodeFile(filename, 
-                                            true, pContent, tam), node));
-            return created;
+            Node<InfoNode> nodeExist = node.getChild(filename);
+            if(nodeExist != null){
+                if((freeSpace+getElementSize(nodeExist)-tam)<0)
+                    return -1;
+                else{
+                    if(pOverride){
+                        node.removeChild(nodeExist);
+                        node.addChild(newNode);
+                        return 1;
+                    }else{
+                        return 0;
+                    }
+                }
+            }
+            else{
+                if((freeSpace-tam)<0){
+                    return -1;
+                }else{
+                    node.addChild(newNode);
+                    return 1;
+                }
+            }
         }
-        return false;
+        return -2;
     }
     
 
@@ -253,11 +283,18 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             if(oldDirectory == null)return false;
         }
         Node<InfoNode> node = findNode(oldDirectory, filename);
-        if(node == null) return false;
+        if(node == null){
+            return false;
+        }
         Node<InfoNode> newDirectory = findPath(newPath,pRoot);
-        if(newDirectory == null)return false;
+        if(newDirectory == null){
+            return false;
+        }
         boolean moved;
         Node<InfoNode> nodeExist;
+        if(node.equals(newDirectory)){
+            return false;
+        }
         if(oldDirectory.equals(newDirectory)){
             if(params.length > 3){
                 String newName = params[3];
@@ -269,7 +306,9 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             return false;
         }else{
             nodeExist = findNode(newDirectory,node.getData().getName());
-            if(nodeExist != null)return false;
+            if(nodeExist != null){
+                return false;
+            }
             oldDirectory.removeChild(node);
             newDirectory.addChild(node);
             node.setParent(newDirectory);
