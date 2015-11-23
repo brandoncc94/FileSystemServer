@@ -303,10 +303,15 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             return false;
         }
         Node<InfoNode> newDirectory = findPath(newPath,pRoot);
-        if(newDirectory == null)return false;
+        if(newDirectory == null){
+            return false;
+        }
         boolean moved;
         Node<InfoNode> nodeExist;
         if(node.equals(newDirectory)){
+            return false;
+        }
+        if(oldDirectory.equals(newDirectory)){
             if(params.length > 3){
                 String newName = params[3];
                 nodeExist = findNode(newDirectory,newName);
