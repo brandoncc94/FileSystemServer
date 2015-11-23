@@ -10,6 +10,14 @@ public class Node<T> {
 
     public Node() { }
     
+    public Node(Node<T> pNode, Node<T> pParent){
+        InfoNode info = (InfoNode)pNode.getData();
+        this.data = (T) new InfoNode(info.getName(),info.isIsFile(),info.getSize());
+        System.out.println(((InfoNode)this.getData()).getName() +" , "+((InfoNode)this.getData()).isIsFile());
+        this.parent = pParent;
+        this.children = new ArrayList<>();
+    }
+    
     public Node(T data, Node<T> parent) {
         this.data = data;
         this.parent = parent;
