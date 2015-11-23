@@ -408,8 +408,8 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         FileSystem fs = getFileSystem(pRoot);
         Node<InfoNode> node = fs.getCurrent_Directory();
         ArrayList children =  node.getChildren();
+        System.out.println("Cantidad de nodos:" + children.size());
         ArrayList<Object> removedChildren = new ArrayList<>();
-        
         if(isDir){
             try{
                 if(filenames.length > 1){
@@ -421,17 +421,19 @@ public class Server extends UnicastRemoteObject implements IFunctions {
                 }else{
                     System.out.println("ERROR! Directorio " + filenames[1] + " no encontrado.");
                 }            
-            }catch(Exception e) { return false; }
+            }catch(Exception e) { 
+                return false;
+            }
         }
-        
         for (Object object : children) {
             try{
-                Node<InfoNodeFile> child = (Node<InfoNodeFile>) object;
+                Node<InfoNode> child = (Node<InfoNode>) object;
                 if(child.getData().isIsFile()){
                     if(isDir)
                         removedChildren.add(child);
                     else{
                         for(int i = 0; i < filenames.length; i++){
+                            System.out.println("Comparacion: *"+ child.getData().getName()+"* *"+ filenames[i]+"*");
                             if(child.getData().getName().equals(filenames[i])){
                                 removedChildren.add(child);
                             }   
@@ -439,12 +441,13 @@ public class Server extends UnicastRemoteObject implements IFunctions {
                     }
                 }
             }
-            catch(Exception e){ }
+            catch(Exception e){
+                
+            }
         }
         
         for(int i = 0; i < removedChildren.size(); i++)
-                    children.remove(removedChildren.get(i));
-        
+            children.remove(removedChildren.get(i));
         return true;
     }
     
@@ -492,16 +495,16 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             if(node == null) return false;
             Node<InfoNode> newDirectory = findPath(newPath,root);
             if(newDirectory == null)return false;
-            if(newDirectory.getData().isIsFile()) return false;
-
             Node<InfoNode> nodeExist;
             if(node.equals(newDirectory))
                 return false;
             else{
                 nodeExist = findNode(newDirectory,node.getData().getName());
                 if(nodeExist != null)return false;
-                newDirectory.addChild(node);
-                node.setParent(newDirectory);
+                Node cpyNode = new Node(node,newDirectory);
+                copyNode(cpyNode,node);
+                newDirectory.addChild(cpyNode);
+                cpyNode.setParent(newDirectory);
                 return true;
             }
         }else if(type == 2){
@@ -567,12 +570,24 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         return false;
     }
     
-    public String getContentFromFile(String pPath) throws FileNotFoundException, IOException{
+    private void copyNode(Node<InfoNode> pNode,Node<InfoNode> pNodeOld){
+        if(pNode.getData().isIsFile()){
+            return; 
+        }else{
+            for(Node<InfoNode> node : (ArrayList<Node<InfoNode>>)pNodeOld.getChildren()) {
+                Node cpyNode = new Node(node,pNode);
+                pNode.addChild(cpyNode); 
+                cpyNode.setParent(pNode);
+                copyNode(cpyNode,node);
+            }
+        }
+    }
+    
+    private String getContentFromFile(String pPath) throws FileNotFoundException, IOException{
         String text = "";
         try(BufferedReader br = new BufferedReader(new FileReader(pPath))) {
             StringBuilder sb = new StringBuilder();
             String line = br.readLine();
-
             while (line != null) {
                 sb.append(line);
                 sb.append(System.lineSeparator());
