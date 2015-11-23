@@ -318,7 +318,7 @@ public class Server extends UnicastRemoteObject implements IFunctions {
                 if(nodeExist != null)return false;
                 node.getData().setName(newName);
                 return true;
-            }
+               }
             return false;
         }else{
             nodeExist = findNode(newDirectory,node.getData().getName());
