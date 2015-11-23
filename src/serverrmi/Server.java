@@ -443,7 +443,7 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         }
         
         for(int i = 0; i < removedChildren.size(); i++)
-                    children.remove(removedChildren.get(i));
+            children.remove(removedChildren.get(i));
         
         return true;
     }
