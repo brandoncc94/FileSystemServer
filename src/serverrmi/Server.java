@@ -4,12 +4,29 @@ package serverrmi;
 import RMI.FileSystem;
 import RMI.InfoNode;
 import RMI.InfoNodeFile;
+import RMI.InfoPath;
 import maininterface.IFunctions;
 import RMI.Node;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
  
 public class Server extends UnicastRemoteObject implements IFunctions {
  
@@ -38,6 +55,15 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         Node currentNode = fileSystem.getCurrent_Directory();
         boolean created = currentNode.addChild(new Node(new InfoNode(pName,false),currentNode));
         return created;
+    }
+    
+    public Node mkdir_aux(String pName,String pRoot, String pPath){
+        System.out.println("Creando el directorio " + pName);
+        Node node = findPath(pPath, pRoot);
+        if(node == null) return null;
+        System.out.println("ajaaaa");
+        node.addChild(new Node(new InfoNode(pName,false), node));
+        return node;
     }
     
     @Override
@@ -156,7 +182,6 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     private Node findPath(String pPath,String pRoot){
         FileSystem fs = getFileSystem(pRoot);
         String[] path = pPath.split("\\\\"); 
-        System.out.println(path[0]);
         Node<InfoNode> node = null;
         boolean withRoot = false;
         if(path[0].equals(pRoot+":")){
@@ -256,9 +281,9 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         if(node == null) return false;
         Node<InfoNode> newDirectory = findPath(newPath,pRoot);
         if(newDirectory == null)return false;
-        boolean moved;
+        
         Node<InfoNode> nodeExist;
-        if(oldDirectory.equals(newDirectory)){
+        if(node.equals(newDirectory)){
             if(params.length > 3){
                 String newName = params[3];
                 nodeExist = findNode(newDirectory,newName);
@@ -414,5 +439,117 @@ public class Server extends UnicastRemoteObject implements IFunctions {
                 pRutas = find_aux(child.getChildren(), pName, pRoot, pRutas);
         }
         return pRutas;
+    }
+    
+    @Override
+    public boolean cpy(String[] paths, int type, String root) throws RemoteException{
+        FileSystem fs = getFileSystem(root);
+        if(type == 1){
+            //Copiado virtual - virtual
+            String fileNamePath = paths[0];
+            int endIndex = fileNamePath.lastIndexOf("\\");
+            String path = "";
+            String newPath = paths[1];
+            String filename = fileNamePath;
+            Node<InfoNode> oldDirectory = fs.getCurrent_Directory();
+            if (endIndex != -1){ 
+                path = fileNamePath.substring(0, endIndex + 1);
+                filename = fileNamePath.substring(endIndex + 1, fileNamePath.length());
+                oldDirectory = findPath(path,root);
+                if(oldDirectory == null)return false;
+            }
+            Node<InfoNode> node = findNode(oldDirectory, filename);
+            if(node == null) return false;
+            Node<InfoNode> newDirectory = findPath(newPath,root);
+            if(newDirectory == null)return false;
+            if(newDirectory.getData().isIsFile()) return false;
+
+            Node<InfoNode> nodeExist;
+            if(node.equals(newDirectory))
+                return false;
+            else{
+                nodeExist = findNode(newDirectory,node.getData().getName());
+                if(nodeExist != null)return false;
+                newDirectory.addChild(node);
+                node.setParent(newDirectory);
+                return true;
+            }
+        }else if(type == 2){
+            //Copiado real virtual
+            File file = new File(paths[0]);
+            if(!file.exists()) return false;
+            if(file.isDirectory()){
+                return true;
+            }else{
+                Node<InfoNode> newDir = findPath(paths[1],root);
+                if(newDir == null)return false;
+                if(newDir.getData().isIsFile()) return false;
+                String content;
+                try {
+                    content = getContentFromFile(file.getAbsolutePath());
+                    int tam = content.length()/1024 + 1;
+                    Node<InfoNode> newNode = null;
+                    newNode = new Node(new InfoNodeFile(file.getName(), 
+                                            true, content, tam), newNode);
+                    newDir.addChild(newNode);
+                    newNode.setParent(newDir);
+                    return true;
+                } catch (IOException ex) {
+                    return false;
+                }
+            }
+        }else if (type == 3){
+            //Copiado virtual real
+            System.out.println("COPIADO VIRTUAL REAL");
+            String path = "";
+            String filename = paths[0];
+            Node<InfoNode> node = fs.getCurrent_Directory();
+            path = getPath(node, root);
+            int endIndex = paths[0].lastIndexOf("\\");
+            if (endIndex != -1){ 
+                path = paths[0].substring(0, endIndex + 1);
+                filename = paths[0].substring(endIndex + 1, paths[0].length());
+                node = findPath(path, root);
+            }
+            System.out.println("PATH: " + path);
+            Node<InfoNode> newNode = findPath(path, root);
+            try{
+                Node<InfoNodeFile> newDire = findNode(newNode, filename);
+                if(newDire == null) return false;
+                File f = new File(paths[1] + File.separator + newDire.getData().getName());
+                //f.getParentFile().mkdirs();
+                try {
+                    f.createNewFile();                        
+                    BufferedWriter writer = null;
+                    writer = new BufferedWriter( new FileWriter(f));
+                    writer.write(newDire.getData().getContent());
+                    writer.close();
+                    return true;
+                } catch (IOException ex) {
+                    return false;
+                }
+            }catch(Exception e){
+                Node<InfoNode> newDire = findNode(newNode, filename);
+                if(newDire == null) return false;
+                //return cpy_aux(newDire.getChildren(), root, paths[1], filename);
+            }
+        }
+        return false;
+    }
+    
+    public String getContentFromFile(String pPath) throws FileNotFoundException, IOException{
+        String text = "";
+        try(BufferedReader br = new BufferedReader(new FileReader(pPath))) {
+            StringBuilder sb = new StringBuilder();
+            String line = br.readLine();
+
+            while (line != null) {
+                sb.append(line);
+                sb.append(System.lineSeparator());
+                line = br.readLine();
+            }
+            text = sb.toString();
+        }
+        return text;
     }
 }
