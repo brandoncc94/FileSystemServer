@@ -38,13 +38,13 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     
     @Override
     public String create(int pSize) throws RemoteException {
-        System.out.println("Creando disco virtual de tamaño  " + pSize + "Kb");
+        System.out.println("Creando disco virtual de tamaño  " + pSize + "bytes");
         int ascii = 65;
         String root = Character.toString((char)(ascii + directory));
         directory++;
         FileSystem new_FileSystem = new FileSystem(root, pSize);
         fileSystems.add(new_FileSystem);
-        System.out.println("Disco virtual "+root+" creado exitosamente. Tamaño de disco "+ new_FileSystem.getSize()+"Kb.");
+        System.out.println("Disco virtual "+root+" creado exitosamente. Tamaño de disco "+ new_FileSystem.getSize()+"bytes.");
         return root;
     }
     
@@ -105,7 +105,6 @@ public class Server extends UnicastRemoteObject implements IFunctions {
     private String treeAux(ArrayList<Node<InfoNode>> pChildren,String preString,int pSizeStr){
         String tree = "";
         int cont = 1;
-        System.out.println(pChildren.size());
         int sizeChildren = pChildren.size();
         for (Node<InfoNode> child: pChildren) {
             boolean isFile = child.getData().isIsFile();
@@ -212,7 +211,6 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             else{
                 node = findDirectory(node, path[i]);
                 if(node==null){
-                    System.out.println("No encontrado");
                     return node;
                 }
                 i++;
@@ -244,11 +242,8 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             filename = pFileNamePath.substring(endIndex + 1, pFileNamePath.length());
             node = findPath(path,pRoot);
         }
-        System.out.println("PATH CREATE FILE: " + path);
-        System.out.println("FILENAME CREATE FILE: " + filename);
         int freeSpace = fs.getSize() - getElementSize(fs.getFileSystem().getRoot());
-        System.out.println("Espacio disponible : "+freeSpace);
-        int tam = pContent.length()/1024 + 1;
+        int tam = pContent.length();
         Node<InfoNode> newNode = new Node(new InfoNodeFile(filename,true, pContent, tam), node);
         if(node != null){
             Node<InfoNode> nodeExist = node.getChild(filename);
@@ -283,10 +278,11 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         FileSystem fs = getFileSystem(pRoot);
         String listChildren="";
         ArrayList children = fs.getCurrent_Directory().getChildren();
-        System.out.println("La cantidad de archivos es :"+children.size());
         for (Object object : children) {
             Node<InfoNode> child = (Node<InfoNode>) object;
-            listChildren = listChildren + child.getData().getName() +"\n";
+            String type = "<DIR>\t";
+            if(child.getData().isIsFile())type="<FILE>\t";
+            listChildren = listChildren + type + child.getData().getName() +"\n";
         }
         return listChildren;
     }
@@ -386,7 +382,6 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         if(endIndex != -1){
             String path = pName.substring(0, endIndex + 1);
             String name = pName.substring(endIndex + 1, pName.length());
-            System.out.println("Ruta: " +  path + ", nodo: "+ name);
             currentNode = findPath(path,pRoot);
             pName = name;
             if(currentNode == null)return -1;
@@ -424,7 +419,6 @@ public class Server extends UnicastRemoteObject implements IFunctions {
             filename = filenames[1];
             try{
                 if(filenames.length > 1){
-                    System.out.println("children:" + children);
                     for (Object object : children) {
                         Node<InfoNode> child = (Node<InfoNode>) object;
                         String path = "";
@@ -659,7 +653,6 @@ public class Server extends UnicastRemoteObject implements IFunctions {
         for (Object object : pChildren) {
             Node<InfoNodeFile> child = (Node<InfoNodeFile>) object;
             pRutas = getPath((Node)child, pRoot);
-            System.out.println("Rutas: " + pRutas);
             try{
                 if(child.getData().isIsFile()){
                     try{
